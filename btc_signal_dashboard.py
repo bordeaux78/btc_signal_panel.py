@@ -1,4 +1,4 @@
-# Streamlit ile İlk 5 Major Coin Teknik Analiz Paneli (Günlük, Binance API) — Test Sürümü
+# Streamlit ile İlk 5 Major Coin Teknik Analiz Paneli (Günlük, CoinGecko API) — Test Sürümü
 
 import streamlit as st
 import pandas as pd
@@ -14,26 +14,30 @@ if password != "berlinharunHh_":
     st.warning("⚠️ Erişim reddedildi. Doğru parolayı girin.")
     st.stop()
 
-BASE_URL = 'https://api.binance.com'
+# CoinGecko üzerinden veri çekme
+COIN_MAP = {
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+    'BNB': 'binancecoin',
+    'SOL': 'solana',
+    'XRP': 'ripple'
+}
 
-def get_klines(symbol, interval='1d', limit=100):
-    url = f"{BASE_URL}/api/v3/klines"
-    params = {"symbol": symbol, "interval": interval, "limit": limit}
+def get_ohlcv_from_coingecko(coin_id, days=90):
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+    params = {"vs_currency": "usd", "days": days, "interval": "daily"}
     response = requests.get(url, params=params)
     try:
         data = response.json()
-        st.write(f"{symbol} API yanıtı:", data[:1])
-        if isinstance(data, dict) and "code" in data:
-            return pd.DataFrame()
-        df = pd.DataFrame(data, columns=[
-            'open_time', 'open', 'high', 'low', 'close', 'volume',
-            'close_time', 'quote_asset_volume', 'number_of_trades',
-            'taker_buy_base_volume', 'taker_buy_quote_volume', 'ignore'])
-        df['close'] = df['close'].astype(float)
-        df['volume'] = df['volume'].astype(float)
-        return df[['close', 'volume']]
+        prices = data['prices']
+        volumes = data['total_volumes']
+        df = pd.DataFrame({
+            'close': [p[1] for p in prices],
+            'volume': [v[1] for v in volumes]
+        })
+        return df
     except Exception as e:
-        st.error(f"{symbol} veri çekme hatası: {str(e)}")
+        st.error(f"{coin_id} veri çekme hatası: {str(e)}")
         return pd.DataFrame()
 
 def compute_rsi(series, period=14):
@@ -79,22 +83,23 @@ def calculate_signal(df):
         return 'HOLD'
 
 # Yalnızca ilk 5 major coin ile test
-TOP_COINS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT']
+TOP_COINS = list(COIN_MAP.keys())
 
 st.title("🧪 İlk 5 Major Coin Günlük Teknik Sinyal Paneli (TEST)")
 
 results = []
 for symbol in TOP_COINS:
     try:
-        df = get_klines(symbol)
-        time.sleep(0.5)  # Rate limit koruması
+        coin_id = COIN_MAP[symbol]
+        df = get_ohlcv_from_coingecko(coin_id)
+        time.sleep(1)  # CoinGecko rate limit koruması
         signal = calculate_signal(df)
         results.append({
-            'Coin': symbol.replace('USDT', ''),
+            'Coin': symbol,
             'Last Close ($)': round(df['close'].iloc[-1], 2) if not df.empty else 'N/A',
             'Signal': signal
         })
     except Exception as e:
-        results.append({'Coin': symbol.replace('USDT', ''), 'Signal': f'Error: {str(e)}'})
+        results.append({'Coin': symbol, 'Signal': f'Error: {str(e)}'})
 
 st.dataframe(pd.DataFrame(results))
