@@ -5,8 +5,6 @@ import pandas as pd
 import numpy as np
 import requests
 from datetime import datetime
-from binance.client import Client
-from binance.exceptions import BinanceAPIException
 
 # Basit parola kontrolü
 st.set_page_config(page_title="Kripto Sinyal Paneli", layout="wide")
