@@ -26,6 +26,7 @@ def get_ohlcv_from_yfinance(symbol, period='90d', interval='1d'):
     try:
         df = yf.download(symbol, period=period, interval=interval, progress=False)
         df = df[['Close', 'Volume']].rename(columns={'Close': 'close', 'Volume': 'volume'})
+        df = df.reset_index(drop=True)  # Hatalı Series kıyaslamasını engeller
         return df
     except Exception as e:
         st.error(f"{symbol} veri çekme hatası: {str(e)}")
@@ -59,19 +60,22 @@ def calculate_signal(df):
     df['VolMA20'] = df['volume'].rolling(window=20).mean()
 
     latest = df.iloc[-1]
-    if (
-        latest['close'] > latest['EMA20'] > latest['EMA50']
-        and latest['MACD'] > latest['MACDSignal']
-        and latest['volume'] > latest['VolMA20']
-        and 40 < latest['RSI'] < 70
-    ):
-        return 'LONG'
-    elif latest['RSI'] < 30 and latest['MACD'] > latest['MACDSignal']:
-        return 'LONG'
-    elif latest['RSI'] > 70 and latest['MACD'] < latest['MACDSignal']:
-        return 'SHORT'
-    else:
-        return 'HOLD'
+    try:
+        if (
+            latest['close'] > latest['EMA20'] > latest['EMA50']
+            and latest['MACD'] > latest['MACDSignal']
+            and latest['volume'] > latest['VolMA20']
+            and 40 < latest['RSI'] < 70
+        ):
+            return 'LONG'
+        elif latest['RSI'] < 30 and latest['MACD'] > latest['MACDSignal']:
+            return 'LONG'
+        elif latest['RSI'] > 70 and latest['MACD'] < latest['MACDSignal']:
+            return 'SHORT'
+        else:
+            return 'HOLD'
+    except Exception as e:
+        return f'Error: {str(e)}'
 
 # İlk 5 major coin için sinyal üret
 TOP_COINS = list(COIN_MAP.keys())
