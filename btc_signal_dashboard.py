@@ -1,10 +1,9 @@
-# Streamlit ile İlk 5 Major Coin Teknik Analiz Paneli (Günlük, CoinGecko API) — Test Sürümü
+# Streamlit ile İlk 5 Major Coin Teknik Analiz Paneli (Günlük, YFinance) — Test Sürümü
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
-import time
+import yfinance as yf
 from datetime import datetime
 
 # Basit parola kontrolü
@@ -14,30 +13,22 @@ if password != "berlinharunHh_":
     st.warning("⚠️ Erişim reddedildi. Doğru parolayı girin.")
     st.stop()
 
-# CoinGecko üzerinden veri çekme
+# YFinance sembolleri
 COIN_MAP = {
-    'BTC': 'bitcoin',
-    'ETH': 'ethereum',
-    'BNB': 'binancecoin',
-    'SOL': 'solana',
-    'XRP': 'ripple'
+    'BTC': 'BTC-USD',
+    'ETH': 'ETH-USD',
+    'BNB': 'BNB-USD',
+    'SOL': 'SOL-USD',
+    'XRP': 'XRP-USD'
 }
 
-def get_ohlcv_from_coingecko(coin_id, days=90):
-    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
-    params = {"vs_currency": "usd", "days": days, "interval": "daily"}
-    response = requests.get(url, params=params)
+def get_ohlcv_from_yfinance(symbol, period='90d', interval='1d'):
     try:
-        data = response.json()
-        prices = data['prices']
-        volumes = data['total_volumes']
-        df = pd.DataFrame({
-            'close': [p[1] for p in prices],
-            'volume': [v[1] for v in volumes]
-        })
+        df = yf.download(symbol, period=period, interval=interval, progress=False)
+        df = df[['Close', 'Volume']].rename(columns={'Close': 'close', 'Volume': 'volume'})
         return df
     except Exception as e:
-        st.error(f"{coin_id} veri çekme hatası: {str(e)}")
+        st.error(f"{symbol} veri çekme hatası: {str(e)}")
         return pd.DataFrame()
 
 def compute_rsi(series, period=14):
@@ -82,17 +73,15 @@ def calculate_signal(df):
     else:
         return 'HOLD'
 
-# Yalnızca ilk 5 major coin ile test
+# İlk 5 major coin için sinyal üret
 TOP_COINS = list(COIN_MAP.keys())
 
-st.title("🧪 İlk 5 Major Coin Günlük Teknik Sinyal Paneli (TEST)")
+st.title("🧪 İlk 5 Major Coin Günlük Teknik Sinyal Paneli (YFinance)")
 
 results = []
 for symbol in TOP_COINS:
     try:
-        coin_id = COIN_MAP[symbol]
-        df = get_ohlcv_from_coingecko(coin_id)
-        time.sleep(1)  # CoinGecko rate limit koruması
+        df = get_ohlcv_from_yfinance(COIN_MAP[symbol])
         signal = calculate_signal(df)
         results.append({
             'Coin': symbol,
