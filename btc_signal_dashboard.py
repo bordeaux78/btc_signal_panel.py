@@ -52,6 +52,9 @@ def compute_macd(series, fast=12, slow=26, signal=9):
 
 
 def calculate_signal(df):
+    if df.empty or len(df) < 50:
+        return 'Data Error'
+
     df['EMA20'] = df['close'].ewm(span=20, adjust=False).mean()
     df['EMA50'] = df['close'].ewm(span=50, adjust=False).mean()
     df['RSI'] = compute_rsi(df['close'])
@@ -102,12 +105,12 @@ for symbol in TOP_50_SYMBOLS:
         signal = calculate_signal(df)
         results.append({
             'Coin': symbol.replace('USDT', ''),
-            'Last Close ($)': round(df['close'].iloc[-1], 2),
-            'RSI': round(df['RSI'].iloc[-1], 2),
-            'MACD': round(df['MACD'].iloc[-1], 2),
-            'MACD Signal': round(df['MACDSignal'].iloc[-1], 2),
-            'Trend': 'Bullish' if df['close'].iloc[-1] > df['EMA20'].iloc[-1] > df['EMA50'].iloc[-1] else 'Bearish',
-            'Volume Check': 'High' if df['volume'].iloc[-1] > df['VolMA20'].iloc[-1] else 'Low',
+            'Last Close ($)': round(df['close'].iloc[-1], 2) if not df.empty else 'N/A',
+            'RSI': round(df['RSI'].iloc[-1], 2) if 'RSI' in df else 'N/A',
+            'MACD': round(df['MACD'].iloc[-1], 2) if 'MACD' in df else 'N/A',
+            'MACD Signal': round(df['MACDSignal'].iloc[-1], 2) if 'MACDSignal' in df else 'N/A',
+            'Trend': 'Bullish' if not df.empty and df['close'].iloc[-1] > df['EMA20'].iloc[-1] > df['EMA50'].iloc[-1] else 'Bearish',
+            'Volume Check': 'High' if not df.empty and df['volume'].iloc[-1] > df['VolMA20'].iloc[-1] else 'Low',
             'Signal': signal
         })
     except Exception as e:
