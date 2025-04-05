@@ -62,14 +62,14 @@ def calculate_signal(df):
     df['VolMA20'] = df['volume'].rolling(window=20).mean()
 
     try:
-        close = float(df['close'].iloc[-1])
-        ema20 = float(df['EMA20'].iloc[-1])
-        ema50 = float(df['EMA50'].iloc[-1])
-        macd = float(df['MACD'].iloc[-1])
-        macd_signal = float(df['MACDSignal'].iloc[-1])
-        rsi = float(df['RSI'].iloc[-1])
-        volume = float(df['volume'].iloc[-1])
-        volma = float(df['VolMA20'].iloc[-1])
+        close = df['close'].iloc[-1].item()
+        ema20 = df['EMA20'].iloc[-1].item()
+        ema50 = df['EMA50'].iloc[-1].item()
+        macd = df['MACD'].iloc[-1].item()
+        macd_signal = df['MACDSignal'].iloc[-1].item()
+        rsi = df['RSI'].iloc[-1].item()
+        volume = df['volume'].iloc[-1].item()
+        volma = df['VolMA20'].iloc[-1].item()
 
         if close > ema20 > ema50 and macd > macd_signal and volume > volma and 40 < rsi < 70:
             return 'LONG'
