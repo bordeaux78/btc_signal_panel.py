@@ -22,14 +22,19 @@ def get_klines(symbol, interval='1d', limit=100):
     url = f"{BASE_URL}/api/v3/klines"
     params = {"symbol": symbol, "interval": interval, "limit": limit}
     response = requests.get(url, params=params)
-    data = response.json()
-    df = pd.DataFrame(data, columns=[
-        'open_time', 'open', 'high', 'low', 'close', 'volume',
-        'close_time', 'quote_asset_volume', 'number_of_trades',
-        'taker_buy_base_volume', 'taker_buy_quote_volume', 'ignore'])
-    df['close'] = df['close'].astype(float)
-    df['volume'] = df['volume'].astype(float)
-    return df[['close', 'volume']]
+    try:
+        data = response.json()
+        if isinstance(data, dict) and "code" in data:
+            return pd.DataFrame()  # Binance API hata mesajı dönerse boş df
+        df = pd.DataFrame(data, columns=[
+            'open_time', 'open', 'high', 'low', 'close', 'volume',
+            'close_time', 'quote_asset_volume', 'number_of_trades',
+            'taker_buy_base_volume', 'taker_buy_quote_volume', 'ignore'])
+        df['close'] = df['close'].astype(float)
+        df['volume'] = df['volume'].astype(float)
+        return df[['close', 'volume']]
+    except Exception:
+        return pd.DataFrame()
 
 
 def compute_rsi(series, period=14):
